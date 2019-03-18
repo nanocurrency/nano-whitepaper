@@ -1,0 +1,73 @@
+% Status: First Draft; Ready for Review
+% Even though this figure doesn't belong in this section, it's placed here for better placement in the rendered paper.
+\begin{figure*}[!ht]
+  \centering
+  \subfloat[a][When no conflict is detected, no further overhead is required.]{
+    \centering
+    \begin{tikzpicture}[node distance=0.5cm]
+      %%%%%%%%%%%%%%%
+      % No Conflict %
+      %%%%%%%%%%%%%%%
+      \node (receive) [generic_node]
+          {Receive};
+      \node (repeat) [generic_node, right = of receive]
+          {Repeat};
+      \node (observe) [generic_node, right = of repeat]
+          {Observe};
+      \node (fake) [center_text, right = of observe]{};
+      \node (quorum) [generic_node, right = of fake] 
+          {Quorum};
+      \node (confirm) [generic_node, right = of quorum]
+          {Confirm};
+      
+      \draw [arrow] (receive) -- (repeat);
+      \draw [arrow] (repeat) -- (observe);
+      \draw [arrow] (observe) -- (quorum);
+      \draw [arrow] (quorum) -- (confirm);
+      
+    \end{tikzpicture}
+  }
+  \newline
+  \subfloat[b][In the event of a conflicting transaction, nodes vote for the valid transaction.]{
+    \centering
+    \begin{tikzpicture}[node distance=0.5cm]
+      %%%%%%%%%%%%
+      % Conflict %
+      %%%%%%%%%%%%
+      \node (receive) [generic_node]
+          {Receive};
+      \node (repeat) [generic_node, right = of receive]
+          {Repeat};
+      \node (observe) [generic_node, right = of repeat]
+          {Observe};
+      \node (conflict) [generic_node, right = of observe]
+          {\textbf{Conflict}};
+      \node (vote) [generic_node, right = of conflict] 
+          {Vote};
+      \node (confirm) [generic_node, right = of vote]
+          {Confirm};
+      
+      \draw [arrow] (receive) -- (repeat);
+      \draw [arrow] (repeat) -- (observe);
+      \draw [arrow] (observe) -- (conflict);
+      \draw [arrow] (conflict) -- (vote);
+      \draw [arrow] (vote) -- (confirm);
+      
+    \end{tikzpicture}
+  }
+  \caption{RaiBlocks requires no additional overhead for typical transactions. In the event of conflicting transactions, nodes must vote for the transaction to keep}
+  \label{fig:transaction_flow}
+\end{figure*}
+
+In 2008, an anonymous individual under the pseudonym Satoshi Nakamoto published a whitepaper outlining the world's first decentralized cryptocurrency, Bitcoin \cite{Nakamoto_bitcoin:a}. A key innovation brought about by Bitcoin was the blockchain, a public, immutable and decentralized data-structure which is used as a ledger for the currency's transactions. Unfortunately, as Bitcoin matured, several issues in the protocol made Bitcoin prohibitive for many applications:
+\begin{enumerate}
+  \item Poor scalability: Each block in the blockchain can store a limited amount of data, which means the system can only process so many transactions per second, making spots in a block a commodity. Currently the median transaction fee is \$10.38 \cite{Bitcoin_med_fee}.
+  \item High latency: The average confirmation time is 164 minutes \cite{Bitcoin_avg_confirmation_time}.
+  \item Power inefficient: The Bitcoin network consumes an estimated 27.28TWh per year, using on average 260KWh per transaction \cite{Bitcoin_energy_index}.
+\end{enumerate}
+
+Bitcoin, and other cryptocurrencies, function by achieving consensus on their global ledgers in order to verify legitimate transactions while resisting malicious actors. Bitcoin achieves consensus via an economic measure called Proof of Work (PoW). In a PoW system participants compete to compute a number, called a \textit{nonce}, such that the hash of the entire block is in a target range. This valid range is inversely proportional to the cumulative computation power of the entire Bitcoin network in order to maintain a consistent average time taken to find a valid nonce. The finder of a valid nonce is then allowed to add the block to the blockchain; therefore, those who exhaust more computational resources to compute a nonce play a greater role in the state of the blockchain. PoW provides resistance against a Sybil attack, where an entity behaves as multiple entities to gain additional power in a decentralized system, and also greatly reduces race conditions that inherently exist while accessing a global data-structure.
+
+An alternative consensus protocol, Proof of Stake (PoS), was first introduced by Peercoin in 2012 \cite{King_peercoin}. In a PoS system, participants vote with a weight equivalent to the amount of wealth they possess in a given cryptocurrency. With this arrangement, those who have a greater financial investment are given more power and are inherently incentivized to maintain the honesty of the system or risk losing their investment. PoS does away with the wasteful computation power competition, only requiring light-weight software running on low power hardware.
+
+The original RaiBlocks paper and first beta implementation were published in December, 2014, making it one of the first Directed Acyclic Graph (DAG) based cryptocurrencies \cite{Colin_original_raiblocks}. Soon after, other DAG cryptocurrencies began to develop, most notably DagCoin/Byteball and IOTA \cite{Ribero_dagcoin:a, Popov_tangle:a}. These DAG-based cryptocurrencies broke the blockchain mold, improving system performance and security. Byteball achieves consensus by relying on a ``main-chain'' comprised of honest, reputable and user-trusted ``witnesses'', while IOTA achieves consensus via the cumulative PoW of stacked transactions. RaiBlocks achieves consensus via a balance-weighted vote on conflicting transactions. This consensus system provides quicker, more deterministic transactions while still maintaining a strong, decentralized system. RaiBlocks continues this development and has positioned itself as one of the highest performing cryptocurrencies.

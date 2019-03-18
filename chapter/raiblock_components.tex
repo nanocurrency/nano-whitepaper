@@ -1,0 +1,78 @@
+% Status: First Draft; Ready for Review
+Before describing the overall RaiBlocks architecture, we define the individual components that make up the system.
+
+\subsection{Account}
+An account is the public-key portion of a digital signature key-pair. The public-key, also referred to as the address, is shared with other network participants while the private-key is kept secret. A digitally signed packet of data ensures that the contents were approved by the private-key holder. One user may control many accounts, but only one public address may exist per account.
+
+\begin{figure}[!b]
+      \centering
+      \begin{tikzpicture}[node distance=0.5cm]
+            %%%%%%%%%%%%%
+            % ACCOUNT A %
+            %%%%%%%%%%%%%
+            \node (account_A_head) [generic_node]
+                    {Account A \\ Block $N_A$};
+            \node (account_A_prev) [generic_node, below = of account_A_head]
+                    {Account A \\   Block $N_A-1$};
+            \node (account_A_ellipsis) [center_text, below=of account_A_prev]
+                    {$\rvdots$};
+            \node (account_A_1) [generic_node, below = of account_A_ellipsis] 
+                    {Account A \\   Block $1$};
+            \node (account_A_0) [generic_node, below = of account_A_1]
+                    {Account A \\   Block $0$};
+            
+            \draw [arrow] (account_A_head) -- (account_A_prev);
+            \draw [arrow] (account_A_prev) -- (account_A_ellipsis);
+            \draw [arrow] (account_A_ellipsis) -- (account_A_1);
+            \draw [arrow] (account_A_1) -- (account_A_0);
+            
+            %%%%%%%%%%%%%
+            % ACCOUNT B %
+            %%%%%%%%%%%%%
+            \node (account_B_head) [generic_node, right = of account_A_head]
+                    {Account B \\ Block $N_B$};
+            \node (account_B_prev) [generic_node, below = of account_B_head]
+                    {Account B \\   Block $N_B-1$};
+            \node (account_B_ellipsis) [center_text, below=of account_B_prev]
+                    {$\rvdots$};
+            \node (account_B_1) [generic_node, below = of account_B_ellipsis] 
+                    {Account B \\   Block $1$};
+            \node (account_B_0) [generic_node, below = of account_B_1]
+                    {Account B \\   Block $0$};
+            
+            \draw [arrow] (account_B_head) -- (account_B_prev);
+            \draw [arrow] (account_B_prev) -- (account_B_ellipsis);
+            \draw [arrow] (account_B_ellipsis) -- (account_B_1);
+            \draw [arrow] (account_B_1) -- (account_B_0);
+            
+            %%%%%%%%%%%%%
+            % ACCOUNT C %
+            %%%%%%%%%%%%%
+            \node (account_C_head) [generic_node, right = of account_B_head]
+                    {Account C \\ Block $N_C$};
+            \node (account_C_prev) [generic_node, below = of account_C_head]
+                    {Account C \\   Block $N_C-1$};
+            \node (account_C_ellipsis) [center_text, below=of account_C_prev]
+                    {$\rvdots$};
+            \node (account_C_1) [generic_node, below = of account_C_ellipsis] 
+                    {Account C \\   Block $1$};
+            \node (account_C_0) [generic_node, below = of account_C_1]
+                    {Account C \\   Block $0$};
+            
+            \draw [arrow] (account_C_head) -- (account_C_prev);
+            \draw [arrow] (account_C_prev) -- (account_C_ellipsis);
+            \draw [arrow] (account_C_ellipsis) -- (account_C_1);
+            \draw [arrow] (account_C_1) -- (account_C_0);
+      \end{tikzpicture}
+      \caption{Each account has its own blockchain containing the account's balance history. Block 0 must be an open transaction (Section~\ref{sec:open})}
+      \label{fig:account_chain}
+\end{figure}
+
+\subsection{Block/Transaction}
+The term ``block'' and ``transaction'' are often used interchangeably, where a block contains a single transaction. Transaction specifically refers to the action while block refers to the digital encoding of the transaction. Transactions are signed by the private-key belonging to the account on which the transaction is performed.
+
+\subsection{Ledger}
+The ledger is the global set of accounts where each account has its own transaction chain (Figure~\ref{fig:account_chain}). This is a key design component that falls under the category of replacing a run-time agreement with a design-time agreement; everyone agrees via signature checking that only an account owner can modify their own chain. This converts a seemingly shared data-structure, a distributed ledger, in to a set of non-shared ones.
+
+\subsection{Node}
+A \textit{node} is a piece of software running on a computer that conforms to the RaiBlocks protocol and participates in the RaiBlocks network. The software manages the ledger and any accounts the node may control, if any. A node may either store the entire ledger or a pruned history containing only the last few block of each account's blockchain. When setting up a new node it is recommended to verify the entire history and prune locally.

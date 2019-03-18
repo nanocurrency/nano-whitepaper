@@ -1,0 +1,204 @@
+% Status: First Draft; Ready for Review
+Unlike blockchains used in many other cryptocurrencies, RaiBlocks uses a \textit{block-lattice} structure. Each account has its own blockchain (account-chain) equivalent to the account's transaction/balance history (Figure \ref{fig:account_chain}). Each account-chain can only be updated by the account's owner; this allows each account-chain to be updated immediately and asynchronously to the rest of the block-lattice, resulting in quick transactions. RaiBlocks' protocol is extremely light-weight; each transaction fits within the required minimum UDP packet size for being transmitted over the internet. Hardware requirements for nodes are also minimal, since nodes only have to record and rebroadcast blocks for most transactions (Figure \ref{fig:transaction_flow}).
+
+The system is initiated with a \textit{genesis account} containing the \textit{genesis balance}. The genesis balance is a fixed quantity and can never be increased. The genesis balance is divided and sent to other accounts via send transactions registered on the genesis account-chain. The sum of the balances of all accounts will never exceed the initial genesis balance which gives the system an upper bound on quantity and no ability to increase it.
+
+This section will walk through how different types of transactions are constructed and propagated throughout the network.
+
+\begin{figure}[!ht]
+   \centering
+   \begin{tikzpicture}[node distance=1cm]
+      \node (a) [account_name]{A};
+      \node (b) [account_name, right = of a, xshift=0.75cm]{B};
+      \node (c) [account_name, right = of b, xshift=0.75cm]{C};
+            
+      \node (c_1) [t_circ, above = of c, yshift=0cm]{S};
+      \node (c_2) [t_circ, above = of c_1, yshift=0cm]{R};
+      \node (c_3) [t_circ, above = of c_2, yshift=0cm]{R};
+      \node (c_4) [t_circ, above = of c_3, yshift=0cm]{R};
+      
+      \node (a_1) at (c_2-| a)[t_circ]{S};
+      \node (a_2) [t_circ, above = of a_1, yshift=0cm]{R};
+      \node (a_3) [t_circ, above = of a_2, yshift=0]{R};
+            
+      \node (b_1) at (c_1 -| b) [t_circ]{S};
+      \node (b_2) at (c_3 -| b) [t_circ]{S};
+      \node (b_3) [t_circ, above = of b_2]{S};
+            
+      \node (a_ellipsis) [inv_account_name, above=of a_3]{$\rvdots$};
+      \node (b_ellipsis) at (a_ellipsis -| b) [inv_account_name]{$\rvdots$};
+      \node (c_ellipsis) at (a_ellipsis -| c) [inv_account_name]{$\rvdots$};
+
+      \draw [line] (a) -- (a_1);
+      \draw [line] (a_1) -- (a_2);
+      \draw [line] (a_2) -- (a_3);
+      \draw [arrow] (a_3) -- (a_ellipsis);
+      
+      \draw [line] (b) -- (b_1);
+      \draw [line] (b_1) -- (b_2);
+      \draw [line] (b_2) -- (b_3);
+      \draw [arrow] (b_3) -- (b_ellipsis);
+      
+      \draw [line] (c) -- (c_1);
+      \draw [line] (c_1) -- (c_2);
+      \draw [line] (c_2) -- (c_3);
+      \draw [line] (c_3) -- (c_4);
+      \draw [arrow] (c_4) -- (c_ellipsis);
+      
+      \draw [dashed_arrow] (c_1) -- (a_2);
+      \draw [dashed_arrow] (b_1) -- (c_3);
+      \draw [dashed_arrow] (b_3) -- (c_4);
+      \draw [dashed_arrow] (a_1) -- (c_2);
+      \draw [dashed_arrow] (b_2) -- (a_3);
+      
+      \node (time)[inv_account_name, rotate=90, left=of a_1]{Time};
+      \node (e_time)[inv_account_name, left=of a_2, rotate=90, xshift=0.5cm]{};
+      
+      \draw [arrow] (time) -- (e_time);
+   \end{tikzpicture}
+   \caption{Visualization of the block-lattice. Every transfer of funds requires a send block (S) and a receive block (R), each signed by their account-chain's owner (A,B,C)}
+   \label{fig:cross_account_chain}
+\end{figure}
+
+\subsection{Transactions} \label{sec:transactions}
+Transferring funds from one account to another requires two transactions: a \textit{send} deducting the amount from the sender's balance and a \textit{receive} adding the amount to the receiving account's balance (Figure~\ref{fig:cross_account_chain}).
+
+Transferring amounts as separate transactions in the sender's and receiver's accounts serves a few important purposes:
+\begin{enumerate}
+   \item Sequencing incoming transfers that are inherently asynchronous.
+   \item Keeping transactions small to fit in UDP packets.
+   \item Facilitating ledger pruning by minimizing the data footprint.
+   \item Isolating settled transactions from unsettled ones.
+\end{enumerate}
+
+More than one account transferring to the same destination account is an asynchronous operation; network latency and the sending accounts not necessarily being in communication with each other means there is no universally agreeable way to know which transaction happened first. Since addition is associative, the order the inputs are sequenced does not matter, and hence we simply need a global agreement. This is a key design component that converts a run-time agreement in to a design-time agreement. The receiving account has control over deciding which transfer arrived first and is expressed by the signed order of the incoming blocks.
+
+If an account wants to make a large transfer that was received as a set of many small transfers, we want to represent this in a way that fits within a UDP packet. When a receiving account sequences input transfers, it keeps a running total of its account balance so that at any time it has the ability to transfer any amount with a fixed size transaction. This differs from the input/output transaction model used by Bitcoin and other cryptocurrencies.
+
+Some nodes are uninterested in expending resources to store an account's full transaction history; they are only interested in each account's current balance. When an account makes a transaction, it encodes its accumulated balance and these nodes only need to keep track of the latest block, which allows them to discard historical data while maintaining correctness.
+
+Even with a focus on design-time agreements, there is a delay window when validating transactions due to identifying and handling bad actors in the network. Since agreements in RaiBlocks are reached quickly, on the order of milliseconds to seconds, we can present the user with two familiar categories of incoming transactions: settled and unsettled. Settled transactions are transactions where an account has generated receive blocks. Unsettled transactions have not yet been incorporated in to the receiver's cumulative balance. This is a replacement for the more complex and unfamiliar confirmations metric in other cryptocurrencies.
+
+\subsection{Creating an Account}\label{sec:open}
+To create an account, you need to issue an \textit{open} transaction (Figure~\ref{code:open}). An open transaction is always the first transaction of every account-chain and can be created upon the first receipt of funds. The \textit{account} field stores the public-key (address) derived from the private-key that is used for signing. The \textit{source} field contains the hash of the transaction that sent the funds. On account creation, a representative must be chosen to vote on your behalf; this can be changed later (Section~\ref{sec:change}). The account can declare itself as its own representative.
+
+\begin{figure}[!ht]
+\begin{lstlisting}
+open {
+   account: DC04354B1...AE8FA2661B2,
+   source: DC1E2B3F7C...182A0E26B4A,
+   representative: xrb_1anr...posrs,
+   work: 0000000000000000,
+   type: open,
+   signature: 83B0...006433265C7B204
+}
+\end{lstlisting}
+\caption{Anatomy of an open transaction}
+\label{code:open}
+\end{figure}
+
+\subsection{Account Balance}\label{sec:account_balance}
+The account balance is recorded within the ledger itself. Rather than recording the amount of a transaction, verification (Section~\ref{sec:transaction_verification}) requires checking the difference between the balance at the send block and the balance of the preceding block. The receiving account may then increment the previous balance as measured into the final balance given in the new receive block. This is done to improve processing speed when downloading high volumes of blocks. When requesting account history, amounts are already given.
+
+\subsection{Sending From an Account} \label{sec:send}
+To send from an address, the address must already have an existing open block, and therefore a balance (Figure~\ref{code:send}). The \textit{previous} field contains the hash of the previous block in the account-chain. The \textit{destination} field contains the account for funds to be sent to. A send block is immutable once confirmed. Once broadcasted to the network, funds are immediately deducted from the balance of the sender’s account and wait as \textit{pending} until the receiving party signs a block to accept these funds. Pending funds should not be considered awaiting confirmation, as they are as good as spent from the sender’s account and the sender cannot revoke the transaction.
+
+\begin{figure}[!ht]
+\begin{lstlisting}
+send {
+   previous: 1967EA355...F2F3E5BF801,
+   balance: 010a8044a0...1d49289d88c,
+   destination: xrb_3w...m37goeuufdp,
+   work: 0000000000000000,
+   type: send,
+   signature: 83B0...006433265C7B204
+}
+\end{lstlisting}
+\caption{Anatomy of a send transaction}
+\label{code:send}
+\end{figure}
+
+\subsection{Receiving a Transaction}\label{sec:receive}
+To complete a transaction, the recipient of sent funds must create a receive block on their own account-chain (Figure~\ref{code:receive}). The source field references the hash of the associated send transaction. Once this block is created and broadcasted, the account’s balance is updated and the funds have officially moved into their account.
+
+\begin{figure}[!ht]
+\begin{lstlisting}
+receive {
+   previous: DC04354B1...AE8FA2661B2,
+   source: DC1E2B3F7C6...182A0E26B4A,
+   work: 0000000000000000,
+   type: receive,
+   signature: 83B0...006433265C7B204
+}
+\end{lstlisting}
+\caption{Anatomy of a receive transaction}
+\label{code:receive}
+\end{figure}
+
+\subsection{Assigning a Representative}\label{sec:change}
+Account holders having the ability to choose a representative to vote on their behalf is a powerful decentralization tool that has no strong analog in Proof of Work or Proof of Stake protocols. In conventional PoS systems, the account owner's node must be running to participate in voting. Continuously running a node is impractical for many users; giving a representative the power to vote on an account's behalf relaxes this requirement. Account holders have the ability to reassign consensus to any account at any time. A \textit{change} transaction changes the representative of an account by subtracting the vote weight from the old representative and adding the weight to the new representative (Figure~\ref{code:change}). No funds are moved in this transaction, and the representative does not have spending power of the account's funds.
+
+\begin{figure}[!ht]
+\begin{lstlisting}
+change {
+   previous: DC04354B1...AE8FA2661B2,
+   representative: xrb_1anrz...posrs,
+   work: 0000000000000000,
+   type: change,
+   signature: 83B0...006433265C7B204
+}
+\end{lstlisting}
+\caption{Anatomy of a change transaction}
+\label{code:change}
+\end{figure}
+
+\subsection{Forks and Voting} \label{sec:forks}
+A fork occurs when $j$ signed blocks $b_1, b_2, \dots, b_j$ claim the same block as their predecessor (Figure \ref{fig:fork}). These blocks cause a conflicting view on the status of an account and must be resolved. Only the account's owner has the ability to sign blocks into their account-chain, so a fork must be the result of poor programming or malicious intent (double-spend) by the account's owner.
+
+\begin{figure}[!ht]
+   \centering
+   \begin{tikzpicture}[node distance=0.5cm]
+      %%%%%%%%%%%%%
+      % ACCOUNT A %
+      %%%%%%%%%%%%%
+      \node (account_A_0) [generic_node]
+            {Account A \\ Block $i$};
+      \node (account_A_1) [generic_node, right = of account_A_0]
+            {Account A \\ Block $i+1$};
+      \node (account_A_2a) [generic_node, right = of account_A_1, yshift=1cm] 
+            {Account A \\ Block $i+2$};
+      \node (account_A_2b) [generic_node, right = of account_A_1, yshift=-1cm]
+            {Account A \\ Block $i+2$};
+      
+      \draw [arrow] (account_A_1) -- (account_A_0);
+      \draw [arrow] (account_A_2a) -- (account_A_1);
+      \draw [arrow] (account_A_2b) -- (account_A_1);
+   \end{tikzpicture}
+   \caption{A fork occurs when two (or more) signed blocks reference the same previous block. Older blocks are on the left; newer blocks are on the right}
+   \label{fig:fork}
+\end{figure}
+
+Upon detection, a representative will create a vote referencing the block $\hat{b}_i$ in its ledger and broadcast it to the network. The weight of a node's vote, $w_i$, is the sum of the balances of all accounts that have named it as its representative. The node will observe incoming votes from the other $M$ online representatives and keep a cumulative tally for 4 voting periods, 1 minute total, and confirm the winning block (Equation \ref{eq:weighted_vote}).
+
+\begin{align}
+   v(b_j) &= \sum_{i=1}^M w_i\mathbbm{1}_{\hat{b}_i=b_j} \label{eq:weighted_vote} \\
+   b^* &= \argmax_{b_j} v(b_j) \label{eq:most_votes}
+\end{align}
+
+The most popular block $b^*$ will have the majority of the votes and will be retained in the node's ledger (Equation~\ref{eq:most_votes}). The block(s) that lose the vote are discarded. If a representative replaces a block in its ledger, it will create a new vote with a higher sequence number and broadcast the new vote to the network. This is the \textbf{only} scenario where representatives vote.
+
+In some circumstances, brief network connectivity issues may cause a broadcasted block to not be accepted by all peers. Any subsequent block on this account will be ignored as invalid by peers that did not see the initial broadcast. A rebroadcast of this block will be accepted by the remaining peers and subsequent blocks will be retrieved automatically. Even when a fork or missing block occurs, only the accounts referenced in the transaction are affected; the rest of the network proceeds with processing transactions for all other accounts.
+
+\subsection{Proof of Work} \label{sec:pow}
+All four transaction types have a work field that must be correctly populated. The work field allows the transaction creator to compute a nonce such that the hash of the nonce concatenated with the previous field in receive/send/change transactions or the account field in an open transaction is below a certain threshold value. Unlike Bitcoin, the PoW in RaiBlocks is simply used as an anti-spam tool, similar to Hashcash, and can be computed on the order of seconds \cite{Back_hashcash}. Once a transaction is sent, the PoW for the subsequent block can be precomputed since the previous block field is known; this will make transactions appear instantaneous to an end-user so long as the time between transactions is greater than the time required to compute the PoW.
+
+\subsection{Transaction Verification} \label{sec:transaction_verification}
+For a block to be considered valid, it must have the following attributes:
+\begin{enumerate}
+   \item The block must not already be in the ledger (duplicate transaction).
+   \item Must be signed by the account's owner.
+   \item The previous block is the head block of the account-chain. If it exists but is not the head, it is a fork.
+   \item The account must have an open block.
+   \item The computed hash meets the PoW threshold requirement.
+\end{enumerate}
+If it is a receive block, check if the source block hash is pending, meaning it has not already been redeemed. If it is a send block, the balance must be less than the previous balance.

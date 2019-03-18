@@ -1,0 +1,41 @@
+This is an overview of resources used by a RaiBlocks node. Additionally, we go over ideas for reducing resource usage for specific use cases. Reduced nodes are typically called light, pruned, or simplified payment verification (SPV) nodes.
+
+\subsection{Network}
+The amount of network activity depends on how much the network contributes towards the health of a network.
+
+\subsubsection{Representative}
+A representative node requires maximum network resources as it observes vote traffic from other representatives and publishes its own votes.
+
+\subsubsection{Trustless}
+A trustless node is similar to a representative node but is only an observer, it doesn't contain a representative account private key and does not publish votes of its own.
+
+\subsubsection{Trusting}
+A trusting node observes vote traffic from one representative it trusts to correctly perform consensus. This cuts down on the amount of inbound vote traffic from representatives going to this node.
+
+\subsubsection{Light}
+A light node is also a trusting node that only observes traffic for accounts in which it is interested allowing minimal network usage.
+
+\subsubsection{Bootstrap}
+A bootstrap node serves up parts or all of the ledger for nodes that are bringing themselves online. This is done over a TCP connection rather than UDP since it involves a large amount of data that requires advanced flow control.
+
+\subsection{Disk Capacity}
+Depending on the user demands, different node configurations require different storage requirements.
+
+\subsubsection{Historical}
+A node interested in keeping a full historical record of all transactions will require the maximum amount of storage.
+
+\subsubsection{Current}
+Due to the design of keeping accumulated balances with blocks, nodes only need to keep the latest or head blocks for each account in order to participate in consensus. If a node is uninterested in keeping a full history it can opt to keep only the head blocks.
+
+\subsubsection{Light}
+A light node keeps no local ledger data and only participates in the network to observe activity on accounts in which it is interested or optionally create new transactions with private keys it holds.
+
+\subsection{CPU}
+\subsubsection{Transaction Generating}
+A node interested in creating new transactions must produce a Proof of Work nonce in order to pass RaiBlock's throttling mechanism. Computation of various hardware is benchmarked in Appendix \ref{sec:pow_hardware_benchmarks}.
+
+\subsubsection{Representative}
+A representative must verify signatures for blocks, votes, and also produce its own signatures to participate in consensus. The amount of CPU resources for a representative node is significantly less than transaction generating and should work with any single CPU in a contemporary computer.
+
+\subsubsection{Observer}
+An observer node doesn't generate its own votes. Since signature generation overhead is minimal, the CPU requirements are almost identical to running a representative node.

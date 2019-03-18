@@ -1,0 +1,68 @@
+% Status: First Draft; NOT Ready for Review
+RaiBlocks, like all decentralized cryptocurrencies, may be attacked by malicious parties for attempted financial gain or system demise. In this section we outline a few possible attack scenarios, the consequences of such an attack, and how RaiBlock's protocol takes preventative measures.
+
+\subsection{Block Gap Synchronization}
+In Section~\ref{sec:forks}, we discussed the scenario where a block may not be properly broadcasted, causing the network to ignore subsequent blocks. If a node observes a block that does not have the referenced previous block, it has two options:
+\begin{enumerate}
+  \item Ignore the block as it might be a malicious garbage block.
+  \item Request a resync with another node.
+\end{enumerate}
+In the case of a resync, a TCP connection must be formed with a bootstrapping node to facilitate the increased amount of traffic a resync requires. However, if the block was actually a bad block, then the resync was unnecessary and needlessly increased traffic on the network. This is a Network Amplification Attack and results in a denial-of-service.
+
+To avoid unnecessary resyncing, nodes will wait until a certain threshold of votes have been observed for a potentially malicious block before initiating a connection to a bootstrap node to synchronize. If a block doesn't receive enough votes it can be assumed to be junk data.
+
+\subsection{Transaction Flooding}\label{sec:transaction_flooding}
+A malicious entity could send many unnecessary but valid transactions between accounts under its control in an attempt to saturate the network. With no transaction fees they are able to continue this attack indefinitely. However, the PoW required for each transaction limits the transaction rate the malicious entity could generate without significantly investing in computational resources. Even under such an attack in an attempt to inflate the ledger, nodes that are not full historical nodes are able to prune old transactions from their chain; this clamps the storage usage from this type of attack for almost all users.
+
+\subsection{Sybil Attack}
+An entity could create hundreds of RaiBlocks nodes on a single machine; however, since the voting system is weighted based on account balance, adding extra nodes in to the network will not gain an attacker extra votes. Therefore there is no advantage to be gained via a Sybil attack.
+
+\subsection{Penny-Spend Attack}
+A penny-spend attack is where an attacker spends infinitesimal quantities to a large number of accounts in order to waste the storage resources of nodes. Block publishing is rate-limited by the PoW, so this limits the creation of accounts and transactions to a certain extent. Nodes that are not full historical nodes can prune accounts below a statistical metric where the account is most likely not a valid account. Finally, RaiBlocks is tuned to use minimal permanent storage space, so space required to store one additional account is proportional to the size of an $\text{open block} + \text{indexing} = 96\text{B} + 32\text{B} = 128\text{B}$. This equates to 1GB being able to store 8 million penny-spend account. If nodes wanted to prune more aggressively, they can calculate a distribution based on access frequency and delegate infrequently used accounts to slower storage.
+
+\subsection{Precomputed PoW Attack}
+Since the owner of an account will be the only entity adding blocks to the account-chain, sequential blocks can be computed, along with their PoW, before being broadcasted to the network. Here the attacker generates a myriad of sequential blocks, each of minimal value, over an extended period of time. At a certain point, the attacker performs a Denial of Service (DoS) by flooding the network with lots of valid transactions, which other nodes will process and echo as quickly as possible. This is an advanced version of the transaction flooding described in Section~\ref{sec:transaction_flooding}. Such an attack would only work briefly, but could be used in conjunction with other attacks, such as a \textgreater 50\% Attack (Section~\ref{sec:attack_50}) to increase effectiveness. Transaction rate-limiting and other techniques are currently being investigated to mitigate attacks.
+
+\subsection{\textgreater 50\% Attack} \label{sec:attack_50}
+The metric of consensus for RaiBlocks is a balance weighted voting system. If an attacker is able to gain over 50\% of the voting strength, they can cause the network to oscillate consensus rendering the system broken. An attacker is able to lower the amount of balance they must forfeit by preventing good nodes from voting through a network DoS. RaiBlocks takes the following measures to prevent such an attack:
+\begin{enumerate}
+  \item The primary defense against this type of attack is voting-weight being tied to investment in the system. An account holder is inherently incentivized to maintain the honesty of the system to protect their investment. Attempting to flip the ledger would be destructive to the system as a whole which would destroy their investment.
+  
+  \item The cost of this attack is proportional to the market capitalization of RaiBlocks. In PoW systems, technology can be invented that gives disproportionate control compared to monetary investment and if the attack is successful, this technology could be repurposed after the attack is complete. With RaiBlocks the cost of attacking the system scales with the system itself and if an attack were to be successful the investment in the attack cannot be recovered.
+
+  
+  \item In order to maintain the maximum quorum of voters, the next line of defense is representative voting. Account holders who are unable to reliably participate in voting for connectivity reasons can name a representative who can vote with the weight of their balance. Maximizing the number and diversity of representatives increases network resiliency.
+  
+  \item Forks in RaiBlocks are never accidental, so nodes can make policy decisions on how to interact with forked blocks. The only time non-attacker accounts are vulnerable to block forks is if they receive a balance from an attacking account. Accounts wanting to be secure from block forks can wait a little or a lot longer before receiving from an account who generated forks or opt to never receive at all. Receivers could also generate separate accounts to use when receiving funds from dubious accounts in order to insulate other accounts.
+  
+  \item A final line of defense that has not yet been implemented is \textit{block cementing}. RaiBlocks goes to great lengths to settle block forks quickly via voting. Nodes could be configured to cement blocks, which would prevent them from being rolled back after a certain period of time. The network is sufficiently secured through focusing on fast settling time to prevent ambiguous forks.
+\end{enumerate}
+
+A more sophisticated version of a $>50\%$ attack is detailed in Figure \ref{fig:attack_dist}. ``Offline'' is the percentage of representatives who have been named but are not online to vote. ``Stake'' is the amount of investment the attacker is voting with. ``Active'' is representatives that are online and voting according to the protocol. An attacker can offset the amount of stake they must forfeit by knocking other voters offline via a network DoS attack. If this attack can be sustained, the representatives being attacked will become unsynchronized and this is demonstrated by ``Unsync.'' Finally, an attacker can gain a short burst in relative voting strength by switching their Denial of Service attack to a new set of representatives while the old set is re-synchronizing their ledger, this is demonstrated by ``Attack.''
+
+\begin{figure}[!h]
+  \centering
+  \begin{tikzpicture}[node distance=0.0cm]
+    %%%%%%%%%%%%%
+    % ACCOUNT A %
+    %%%%%%%%%%%%%
+    \node (offline) [rec]
+        {Offline};
+    \node (unsynced) [rec, right = of offline]
+        {Unsync};
+    \node (attacked) [rec, right = of unsynced]
+        {\textbf{Attack}};
+    \node (active) [rec, right = of attacked]
+        {\quad\quad\quad\quad Active\quad\quad\quad\quad};
+    \node (stake) [rec, right = of active]
+        {Stake};
+    
+  \end{tikzpicture}
+  \caption{A potential voting arrangement that could lower 51\% attack requirements.}
+  \label{fig:attack_dist}
+\end{figure}
+
+If an attacker is able to cause Stake \textgreater Active by a combination of these circumstances, they would be able to successfully flip votes on the ledger at the expense of their stake. We can estimate how much this type of attack could cost by examining the market cap of other systems. If we estimate 33\% of representatives are offline or attacked via DoS, an attacker would need to purchase 33\% of the market cap in order to attack the system via voting.
+
+\subsection{Bootstrap Poisoning}
+The longer an attacker is able to hold an old private-key with a balance, the higher the probability that balances that existed at that time will not have participating representatives because their balances or representatives have transferred to newer accounts. This means if a node is bootstrapped to an old representation of the network where the attacker has a quorum of voting stake compared to representatives at that point in time, they would be able to oscillate voting decisions to that node. If this new user wanted to interact with anyone besides the attacking node all of their transactions would be denied since they have different head blocks. The net result is nodes can waste the time of new nodes in the network by feeding them bad information. To prevent this, nodes can be paired with an initial database of accounts and known-good block heads; this is a replacement for downloading the database all the way back to the genesis block. The closer the download is to being current, the higher the probability of accurately defending against this attack. In the end, this attack is probably no worse than feeding junk data to nodes while bootstrapping, since they wouldn't be able to transact with anyone who has a contemporary database.
