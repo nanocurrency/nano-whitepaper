@@ -1,5 +1,5 @@
 % Status: First Draft; Ready for Review
-Before describing the overall RaiBlocks architecture, we define the individual components that make up the system.
+Before describing the overall Nano architecture, we define the individual components that make up the system.
 
 \subsection{Account}
 An account is the public-key portion of a digital signature key-pair. The public-key, also referred to as the address, is shared with other network participants while the private-key is kept secret. A digitally signed packet of data ensures that the contents were approved by the private-key holder. One user may control many accounts, but only one public address may exist per account.
@@ -75,4 +75,4 @@ The term ``block'' and ``transaction'' are often used interchangeably, where a b
 The ledger is the global set of accounts where each account has its own transaction chain (Figure~\ref{fig:account_chain}). This is a key design component that falls under the category of replacing a run-time agreement with a design-time agreement; everyone agrees via signature checking that only an account owner can modify their own chain. This converts a seemingly shared data-structure, a distributed ledger, in to a set of non-shared ones.
 
 \subsection{Node}
-A \textit{node} is a piece of software running on a computer that conforms to the RaiBlocks protocol and participates in the RaiBlocks network. The software manages the ledger and any accounts the node may control, if any. A node may either store the entire ledger or a pruned history containing only the last few block of each account's blockchain. When setting up a new node it is recommended to verify the entire history and prune locally.
+A \textit{node} is a piece of software running on a computer that conforms to the Nano protocol and participates in the Nano network. The software manages the ledger and any accounts the node may control, if any. A node may either store the entire ledger or a pruned history containing only the last few block of each account's blockchain. When setting up a new node it is recommended to verify the entire history and prune locally.

@@ -1,7 +1,7 @@
-This is an overview of resources used by a RaiBlocks node. Additionally, we go over ideas for reducing resource usage for specific use cases. Reduced nodes are typically called light, pruned, or simplified payment verification (SPV) nodes.
+This is an overview of resources used by a Nano node. Additionally, we go over ideas for reducing resource usage for specific use cases. Reduced nodes are typically called light, pruned, or simplified payment verification (SPV) nodes.
 
 \subsection{Network}
-The amount of network activity depends on how much the network contributes towards the health of a network.
+The network activity of a node is dependent on how much the node contributes towards the health of a network.
 
 \subsubsection{Representative}
 A representative node requires maximum network resources as it observes vote traffic from other representatives and publishes its own votes.
@@ -32,7 +32,7 @@ A light node keeps no local ledger data and only participates in the network to 
 
 \subsection{CPU}
 \subsubsection{Transaction Generating}
-A node interested in creating new transactions must produce a Proof of Work nonce in order to pass RaiBlock's throttling mechanism. Computation of various hardware is benchmarked in Appendix \ref{sec:pow_hardware_benchmarks}.
+A node interested in creating new transactions must produce a Proof of Work nonce in order to pass Nano's throttling mechanism. Computation of various hardware is benchmarked in Appendix \ref{sec:pow_hardware_benchmarks}.
 
 \subsubsection{Representative}
 A representative must verify signatures for blocks, votes, and also produce its own signatures to participate in consensus. The amount of CPU resources for a representative node is significantly less than transaction generating and should work with any single CPU in a contemporary computer.

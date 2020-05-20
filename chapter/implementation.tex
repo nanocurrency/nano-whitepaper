@@ -2,10 +2,10 @@
 Currently the reference implementation is implemented in C++ and has been producing releases since 2014 on Github \cite{LeMahieu_github}.
 
 \subsection{Design Features}
-The RaiBlocks implementation adheres to the architecture standard outlined in this paper. Additional specifications are described here.
+The Nano implementation adheres to the architecture standard outlined in this paper. Additional specifications are described here.
 
 \subsubsection{Signing Algorithm}
-RaiBlocks uses a modified ED25519 elliptic curve algorithm with Blake2b hashing for all digital signatures \cite{Bernstein_ED25519}. ED25519 was chosen for fast signing, fast verification, and high security.
+Nano uses a modified ED25519 elliptic curve algorithm with Blake2b hashing for all digital signatures \cite{Bernstein_ED25519}. ED25519 was chosen for fast signing, fast verification, and high security.
 
 \subsubsection{Hashing Algorithm}
 Since the hashing algorithm is only used to prevent network spam, the algorithm choice is less important when compared to mining-based cryptocurrencies. Our implementation uses Blake2b as a digest algorithm against block contents \cite{Aumasson_blake2}.
@@ -25,4 +25,4 @@ Nodes can be sure their transaction was received by the network by observing tra
 Building on top of connection-less UDP allows future implementations to use IPv6 multicast as a replacement for traditional transaction flooding and vote broadcast. This will reduce network bandwidth consumption and give more policy flexibility to nodes going forward.
 
 \subsection{Performance}
-At the time of this writing, 4.2 million transactions have been processed by the RaiBlocks network, yielding a blockchain size of 1.7GB. Transaction times are measured on the order of seconds. A current reference implementation operating on commodity SSDs can process over 10,000 transactions per second being primarily IO bound.
+At the time of this writing, 4.2 million transactions have been processed by the Nano network, yielding a blockchain size of 1.7GB. Transaction times are measured on the order of seconds. A current reference implementation operating on commodity SSDs can process over 10,000 transactions per second being primarily IO bound.
