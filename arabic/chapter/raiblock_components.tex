@@ -1,0 +1,83 @@
+% Status: First Draft; Ready for Review
+לפני שנתאר את ארכיטקטורת הנאנו הכללית, נגדיר רכיבים יחידים שמרכיבים את המערכת.
+
+\subsection{חשבון}
+חשבון הוא החלק של המפתח הפומבי בחתימה דיגיטלית מבוססות זוג מפתחות. המפתח הפומבי, אשר מכונה גם כהכתובת, משותף עם שאר משתתפי הרשת כאשר המפתח הפרטי נשמר בסוד. פקטה חתומה דיגיטלית של מידע מבטיחה שתוכנה אושר על ידי מחזיק המפתח הפרטי. למשתמש אחד יכול להיות הרבה חשבונות, אבל קיימת כתובת פומבית אחת לכל חשבון.
+
+\begin{figure}[!b]
+\L{
+      \centering
+      \begin{tikzpicture}[node distance=0.5cm]
+            %%%%%%%%%%%%%
+            % ACCOUNT A %
+            %%%%%%%%%%%%%
+            \node (account_A_head) [generic_node]
+                    {\R{חשבון A} \\ \R{בלוק $N_A$}};
+            \node (account_A_prev) [generic_node, below = of account_A_head]
+                  {\R{חשבון A} \\ \R{בלוק $N_A-1$}};
+            \node (account_A_ellipsis) [center_text, below=of account_A_prev]
+                    {$\rvdots$};
+            \node (account_A_1) [generic_node, below = of account_A_ellipsis] 
+                    {\R{חשבון A} \\ \R{בלוק $1$}};
+            \node (account_A_0) [generic_node, below = of account_A_1]
+                    {\R{חשבון A} \\ \R{בלוק $0$}};
+            
+            \draw [arrow] (account_A_head) -- (account_A_prev);
+            \draw [arrow] (account_A_prev) -- (account_A_ellipsis);
+            \draw [arrow] (account_A_ellipsis) -- (account_A_1);
+            \draw [arrow] (account_A_1) -- (account_A_0);
+            
+            %%%%%%%%%%%%%
+            % ACCOUNT B %
+            %%%%%%%%%%%%%
+            \node (account_B_head) [generic_node, right = of account_A_head]
+                    {\R{חשבון B} \\ \R{בלוק $N_B$}};
+            \node (account_B_prev) [generic_node, below = of account_B_head]
+                    {\R{חשבון B} \\ \R{בלוק $N_B-1$}};
+            \node (account_B_ellipsis) [center_text, below=of account_B_prev]
+                    {$\rvdots$};
+            \node (account_B_1) [generic_node, below = of account_B_ellipsis] 
+                    {\R{חשבון B} \\ \R{בלוק $1$}};
+            \node (account_B_0) [generic_node, below = of account_B_1]
+                    {\R{חשבון B} \\ \R{בלוק $0$}};
+            https://www.sharelatex.com/project/5a4a782bc1cd5f3f61e5100b
+            \draw [arrow] (account_B_head) -- (account_B_prev);
+            \draw [arrow] (account_B_prev) -- (account_B_ellipsis);
+            \draw [arrow] (account_B_ellipsis) -- (account_B_1);
+            \draw [arrow] (account_B_1) -- (account_B_0);
+            
+            %%%%%%%%%%%%%
+            % ACCOUNT C %
+            %%%%%%%%%%%%%
+            \node (account_C_head) [generic_node, right = of account_B_head]
+                    {\R{חשבון C} \\ \R{בלוק $N_C$}};
+            \node (account_C_prev) [generic_node, below = of account_C_head]
+                    {\R{חשבון C} \\ \R{בלוק $N_C-1$}};
+            \node (account_C_ellipsis) [center_text, below=of account_C_prev]
+                    {$\rvdots$};
+            \node (account_C_1) [generic_node, below = of account_C_ellipsis] 
+                    {\R{חשבון C} \\ \R{בלוק $1$}};
+            \node (account_C_0) [generic_node, below = of account_C_1]
+                    {\R{חשבון C} \\ \R{בלוק $0$}};
+            
+            \draw [arrow] (account_C_head) -- (account_C_prev);
+            \draw [arrow] (account_C_prev) -- (account_C_ellipsis);
+            \draw [arrow] (account_C_ellipsis) -- (account_C_1);
+            \draw [arrow] (account_C_1) -- (account_C_0);
+      \end{tikzpicture}
+\R{\caption{ 
+לכל חשבון יש בלוקצ'יין משלו המכיל את הסטוריית המאזן של החשבון. בלוק 0 חייב להיות פעולת פתיחה
+ )חלק~\ref{sec:open}(}}
+ }
+      \label{fig:account_chain}
+      
+\end{figure}
+
+\subsection{בלוק/פעולה}
+נשתמש במושג "בלוק" ו"פעולה" לסירוגין כאשר בלוק מכיל פעולה אחת. הפעולה מתייחסת לפעולת העברת התשלום עצמה כאשר הבלוק מתייחס לקידוד הדיגיטלי של הפעולה. פעולות חתומות על ידי המפתח הפרטי אשר שייך לחשבון שבו הפעולה בוצעה.
+
+\subsection{פנקס חשבונות}
+פנקס החשבונות הכללי הוא קבוצת כל החשבונות כך שלכל חשבון יש שרשרת פעולות פרטית )איור 2(. זהו רכיב מרכזי שנופל תחת  קטגוריית החלפת הסכמת זמן-ריצה עם הסכמת זמן-ארכיטקטורה; כולם מסכימים על ידי בדיקת חתימה שרק בעל החשבון יכול לערוך את השרשרת שלו. זה הופך מבנה נתונים משותף למראית עין, פנקס חשבונות מבוזר, לקבוצה של מבני נתונים לא משותפים.
+
+\subsection{צומת}
+הוא חתיכת תוכנה הרצה על מחשב שפועל תחת פרוטוקול נאנו ומשתתף ברשת נאנו. התוכנה מנהלת את פנקס החשבונות ואת כל החשבונות שהצומת שולט בהם, אם קימיים כאלה. צומת יכול לאחסן את כל פנקס החשבונות או את ההסטוריה הגזומה המכילה רק את הבלוקים האחרונים עבור כל בלוקצ'יין של חשבון. כאשר מרימים צומת חדש, מומלץ לאשר את כל ההסטוריה ולגזום בצורה מקומית.
